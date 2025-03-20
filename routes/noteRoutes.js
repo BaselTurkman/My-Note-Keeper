@@ -6,12 +6,31 @@ const router = express.Router();
 
 router.get("/", async (req, res) => {
     try {
-        const notes = await Note.find()
-        res.json(notes)
+        const page = parseInt(req.query.page) || 1;  
+        const limit = parseInt(req.query.limit) || 10;  
+        const skip = (page - 1) * limit;
+
+        const totalNotes = await Note.countDocuments();  
+        const notes = await Note.find().skip(skip).limit(limit);
+
+        if (notes.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "No notes found" 
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            currentPage: page,
+            totalPages: Math.ceil(totalNotes / limit),
+            totalNotes,
+            notes
+        });
     } catch (error) {
-        res.status(500).json({ message: "server error!", error: error.message })
+        res.status(500).json({ success: false, message: "Server error!", error: error.message });
     }
-})
+});
 
 router.post("/", async (req, res) => {
     try {
@@ -31,7 +50,6 @@ router.post("/", async (req, res) => {
 router.put("/:id", async (req, res) => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            console.log("test error");
             return res.status(400).json({ message: "Invalid note ID" });
         }
 
