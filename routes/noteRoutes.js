@@ -64,6 +64,25 @@ router.delete("/:id", async (req, res) => {
     }
 })
 
+router.get("/search", async (req, res) => {
+    try {
+        const { title, content } = req.query;
+        const filter = [];
+
+        if (title) filter.push({ title: { $regex: title, $options: "i" } });
+        if (content) filter.push({ content: { $regex: content, $options: "i" } });
+
+        const notes = await Note.find(filter.length ? { $or: filter } : {});
+
+        if (notes.length === 0) {
+            return res.status(404).json({ success: false, message: "No notes found for the given query" });
+        }
+
+        res.status(200).json({ success: true, data: notes });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
 
 
 module.exports = router
