@@ -6,17 +6,21 @@ const router = express.Router();
 
 router.get("/", async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;  
-        const limit = parseInt(req.query.limit) || 10;  
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        const totalNotes = await Note.countDocuments();  
+        const totalNotes = await Note.countDocuments();
+
+        if (page > Math.ceil(totalNotes / limit)) {
+            return res.status(404).json({ success: false, message: "Page not found" });
+        }
         const notes = await Note.find().skip(skip).limit(limit);
 
         if (notes.length === 0) {
-            return res.status(404).json({ 
-                success: false, 
-                message: "No notes found" 
+            return res.status(404).json({
+                success: false,
+                message: "No notes found"
             });
         }
 
@@ -43,7 +47,7 @@ router.post("/", async (req, res) => {
         await newNode.save()
         res.status(201).json(newNode)
     } catch (error) {
-        res.status(500).json({ message: "server error!", error: error.message })
+        res.status(500).json({ message: "Server error!", error: error.message })
     }
 })
 
@@ -54,7 +58,7 @@ router.put("/:id", async (req, res) => {
         }
 
         const { title, content } = req.body;
-        if (!title | !content) {
+        if (!title || !content) {
             return res.status(400).json({ message: "All Fields are Required" })
         }
 
@@ -65,7 +69,7 @@ router.put("/:id", async (req, res) => {
 
         res.status(200).json(updateNote)
     } catch (error) {
-        res.status(500).json({ message: "server error!", error: error.message })
+        res.status(500).json({ message: "Server error!", error: error.message })
     }
 })
 
@@ -82,13 +86,18 @@ router.delete("/:id", async (req, res) => {
 
         res.status(200).json({ message: "Note deleted successfully" })
     } catch (error) {
-        res.status(500).json({ message: "server error!", error: error.message })
+        res.status(500).json({ message: "Server error!", error: error.message })
     }
 })
 
 router.get("/search", async (req, res) => {
     try {
         const { title, content } = req.query;
+
+        if (!title && !content) {
+            return res.status(400).json({ success: false, message: "Please provide a search query" });
+        }
+
         const filter = [];
 
         if (title) filter.push({ title: { $regex: title, $options: "i" } });
